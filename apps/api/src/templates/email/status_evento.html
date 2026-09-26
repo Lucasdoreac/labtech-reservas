@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <title>Evento - Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f9f9f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+        }
+        .header {
+            background: #0D5580;
+            color: #fff;
+            padding: 15px;
+            margin: -20px -20px 20px;
+            border-radius: 8px 8px 0 0;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+        }
+        .icon {
+            margin: 20px 0;
+        }
+        .pdf-icon {
+            margin-top: 30px;
+        }
+        .action-info {
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .btn-pdf {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 6px;
+            background-color: #0D5580;
+            color: #ffffff !important;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <!-- Conditional Title -->
+            <h1>
+                {% if is_approved %}
+                    Evento Aprovado
+                {% else %}
+                    Evento Não Aprovado
+                {% endif %}
+            </h1>
+        </div>
+
+        <h2>Olá {{ username }}</h2>
+
+        <!-- Conditional message -->
+        <p>
+            {% if is_approved %}
+                Legal, seu evento foi aprovado!
+            {% else %}
+                Infelizmente seu evento não foi aprovado.
+            {% endif %}
+        </p>
+
+        <!-- Display who approved or rejected the event -->
+        {% if who %}
+            <p class="action-info">
+                {% if is_approved %}
+                    Aprovado por: <strong>{{ who }}</strong>
+                {% else %}
+                    Rejeitado por: <strong>{{ who }}</strong>
+                {% endif %}
+            </p>
+        {% endif %}
+
+        <!-- Conditional status icon (approved or denied) -->
+        <div class="icon">
+            {% if is_approved %}
+                {% if approved_icon_url %}
+                    <img src="{{ approved_icon_url }}" alt="Approved" width="100" />
+                {% else %}
+                    <span style="font-size: 48px; color: #28a745;">✔</span>
+                {% endif %}
+            {% else %}
+                {% if denied_icon_url %}
+                    <img src="{{ denied_icon_url }}" alt="Denied" width="100" />
+                {% else %}
+                    <span style="font-size: 48px; color: #dc3545;">✖</span>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- PDF button (shown if pdf_link present) -->
+        {% if pdf_link %}
+        <div class="pdf-icon">
+            <a class="btn-pdf" href="{{ pdf_link }}" target="_blank">
+                {% if pdf_icon_url %}
+                    <img src="{{ pdf_icon_url }}" alt="PDF" width="20" style="vertical-align: middle; margin-right: 6px;" />
+                {% endif %}
+                📄 Ver Detalhes / Reserva (PDF)
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

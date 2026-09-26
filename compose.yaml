@@ -1,0 +1,117 @@
+# LabTechUDF — Monorepo do Produto Reservas
+# Execução local unificada com 1 comando:
+#   docker compose up -d --build
+#
+# Para testar ponta a ponta:
+#   ./dev-local/smoke.sh
+#
+name: labtech-reservas
+
+services:
+  mongo:
+    image: mongo:8.0
+    restart: unless-stopped
+    volumes: [mongo_data:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:8.2
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redis_data:/data]
+
+  minio:
+    image: quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    env_file: [./dev-local/minio.env]
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+    volumes: [minio_data:/data]
+
+  seed:
+    image: mongo:8.0
+    depends_on: {mongo: {condition: service_healthy}}
+    volumes:
+      - ./dev-local/seed/labtech.backup.tar.gz:/seed/labtech.backup.tar.gz:ro
+    command:
+      - bash
+      - -c
+      - |
+        set -euo pipefail
+        t=$$(mktemp -d)
+        tar -xzf /seed/labtech.backup.tar.gz -C "$$t" mongo-backups/scripts
+        mongorestore --host mongo --quiet --drop --db rooms-reservation-app "$$t/mongo-backups/scripts/scripts"
+        mongosh --host mongo --quiet rooms-reservation-app --eval '
+          db.teachers.updateOne({_id:"coord-sintetico-enf"},
+            {$$set:{PROFESSOR:"Coordenação Sintética ENF (teste local)", COD_CURS:[31], email:"coordenacao-sintetica@udf.edu.br"}}, {upsert:true});
+          db.courses.updateOne({_id:31}, {$$set:{COORDINATOR:"coord-sintetico-enf"}});
+          print("seed ok: cursos", db.courses.countDocuments(), "salas", db.rooms.countDocuments())'
+
+  auth:
+    build: {context: ./apps/auth}
+    restart: unless-stopped
+    depends_on: {seed: {condition: service_completed_successfully}, redis: {condition: service_started}}
+    volumes: [./apps/auth:/auth_service]
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DATABASE: rooms-reservation-app
+      FLASK_ENV: development
+      AUTH_DEV_RETURN_LINK: "true"
+      REDIS_URL: redis://redis:6379/0
+      REACT_APP: http://127.0.0.1:3000
+    ports: ["127.0.0.1:5050:5050"]
+
+  catalog:
+    build: {context: ./apps/catalog}
+    restart: unless-stopped
+    depends_on: {seed: {condition: service_completed_successfully}, redis: {condition: service_started}}
+    volumes: [./apps/catalog:/internal_apis]
+    env_file: [./dev-local/internal.env]
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DATABASE: rooms-reservation-app
+      REDIS_URL: redis://redis:6379/0
+    ports: ["127.0.0.1:5081:5081"]
+
+  api:
+    build: {context: ./apps/api}
+    restart: unless-stopped
+    depends_on: [auth, catalog, minio]
+    volumes: [./apps/api:/python-services]
+    env_file: [./dev-local/minio.env, ./dev-local/internal.env]
+    environment:
+      MONGO_URI: mongodb://mongo:27017/
+      MONGO_DATABASE: rooms-reservation-app
+      FLASK_ENV: development
+      EMAIL_DRY_RUN: "true"
+      URL_AUTH: http://auth:5050
+      URL_graph: http://catalog:5081/graphql/
+      URL_restapi: http://catalog:5081/restapi
+      MINIO_URL: http://minio:9000
+      FRONTEND_URL: http://127.0.0.1:3000
+      OFFER_ADMIN_EMAILS: ofertas.dev@udf.edu.br
+    ports: ["5000:5000"]
+    command: >-
+      sh -c "export MINIO_ACCESS_KEY=$$MINIO_ROOT_USER MINIO_SECRET_KEY=$$MINIO_ROOT_PASSWORD &&
+      PYTHONPATH=src poetry run gunicorn -w 2 -b 0.0.0.0:5000 main:reservation_app"
+
+  web:
+    image: node:24
+    restart: unless-stopped
+    depends_on: [api]
+    working_dir: /app
+    volumes: [./apps/web:/app, web_node_modules:/app/node_modules]
+    environment:
+      REACT_APP_API_BASE_URL: http://localhost:5000
+      WATCHPACK_POLLING: "true"
+    ports: ["127.0.0.1:3000:3000"]
+    command: sh -c "(npm ci --no-audit --no-fund --loglevel=error || npm ci --no-audit --no-fund --loglevel=error) && npm start"
+
+volumes:
+  mongo_data:
+  redis_data:
+  minio_data:
+  web_node_modules:

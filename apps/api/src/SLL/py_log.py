@@ -1,0 +1,111 @@
+import hashlib
+import logging
+import logging.config
+from enum import Enum
+from datetime import datetime
+
+# types of errors=
+# Invalid or missing credentials
+# Invalid or missing API key
+# Token or email missing
+# Token validation failed
+# Invalid email domain
+# Email sender service unavailable: failed to send email
+# Missing data
+# Events not found
+# Reservation not found
+# Rooms not found
+#Campus not found
+#Courses not found
+#Disciplines not found
+#Periods not found
+#Teachers not found
+# ID not informed or null
+
+# Deactivate werkzeug logs
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
+logging.basicConfig(level=logging.INFO, filename="py_log.log", filemode="a",
+                    format="%(asctime)s - %(levelname)s - %(message)s")
+
+
+class Logmessage(Enum):
+    API_KEY_VALIDATED = "API key validated; key: {api_key}; IP: {ip_address};"
+    TOKEN_VALIDATED = "Token validated; email: {email}; token: {token}; IP: {ip_address};"
+    TOKEN_FAILURE = "Token validation failed; email: {email}; token: {token}; IP: {ip_address};"
+    MISSING_CREDENTIALS = "Invalid or missing credentials"
+    MISSING_API_KEY = "Invalid or missing API key:IP {ip_address};"
+    MISSING_EMAIL = "Email missing; email: token: {token}; IP: {ip_address};"
+    MISSING_TOKEN = "Token missing; email: {email}; IP: {ip_address};"
+    INVALID_EMAIL_DOMAIN = "Invalid email domain; email: {email}; IP: {ip_address};"
+    FAILED_SEND_EMAIL = "Email sender service unavailable: failed to send email; IP: {ip_address}; Email: {email};"
+    SENDING_EMAIL = "Sending email; email: {email}; event: {event}; token: {token};"
+    EVENT_APPROVED_REJECTED_BY = "Event {event_id} {action} by {who}; token: {token};"
+    EVENT_CHANGES_REQUESTED = "Event {event_id} changes requested by coordenacao; token: {token};"
+    # Padronizado no formato "<mensagem>; IP: {ip_address};" -- já era o
+    # formato usado pela maioria dos membros abaixo; MISSING_DATA e
+    # EVENTS_NOT_FOUND tinham espaçamento divergente (sem espaço antes de
+    # "IP:", com espaço extra antes do ";" final), corrigido aqui.
+    MISSING_DATA = "Missing data; IP: {ip_address};"
+    EVENTS_NOT_FOUND = "Events not found; IP: {ip_address};"
+    RESERVATION_NOT_FOUND = "Reservation not found; IP: {ip_address};"
+    UPDATING_EVENT_STATUS = "Updating event status; event_id: {event_id}; reservation_id: {reservation_id} status: {status};"
+    BUILDING_NOT_FOUND = "Building not found; IP: {ip_address};"
+    ROOMS_NOT_FOUND = "Rooms not found; IP: {ip_address};"
+    CAMPUS_NOT_FOUND = "Campus not found; IP: {ip_address};"
+    COURSES_NOT_FOUND = "Courses not found; IP: {ip_address};"
+    DISCIPLINES_NOT_FOUND = "Disciplines not found; IP: {ip_address};"
+    PERIODS_NOT_FOUND = "Periods not found; IP: {ip_address};"
+    TEACHERS_NOT_FOUND = "Teachers not found; IP: {ip_address};"
+    TYPES_NOT_FOUND = "Types not found; IP: {ip_address};"
+    AUTH_SERVICE_UNAVAILABLE = "Authentication service unavailable;"
+    INTERNAL_APIS_CRASHED = "Internal APIs crashed; IP: {ip_address}; Payload: {payload}; Endpoint: {endpoint}; Error: {error};"
+    ID_NOT_INFORMED = "ID not informed or null; IP: {ip_address}; Collection: {collection}; ID: {id};"
+
+
+
+class LogType(Enum):
+    INFO = logging.INFO
+    ERROR = logging.ERROR
+    WARNING = logging.WARNING
+    DEBUG = logging.DEBUG
+    CRITICAL = logging.CRITICAL
+
+
+def mask_token(token) -> str:
+    """Impressão digital curta do token: correlaciona linhas do log sem
+    permitir reusar o token (login por magic link e aprovação por e-mail)."""
+    if not token:
+        return "-"
+    return "sha256:" + hashlib.sha256(str(token).encode()).hexdigest()[:8]
+
+
+class AppLogger:
+
+    @staticmethod
+    def log(message: Logmessage | str, log_type: LogType, **kwargs):
+        if "token" in kwargs:
+            kwargs["token"] = mask_token(kwargs["token"])
+        try:
+            current_date = datetime.timestamp(datetime.now())
+            timestamp = datetime.timestamp(datetime.now())
+            # Aceita texto livre além do enum: dois chamadores já passam f-string
+            # (events_routes.put_event e send_emails), e o `.value` fazia o
+            # PRÓPRIO tratamento de erro estourar AttributeError — virando 500 e
+            # travando a tela de confirmação do evento.
+            text = message.value.format(**kwargs) if isinstance(message, Logmessage) else str(message)
+            formatted_message = f'{current_date} - {timestamp} - {text}'
+        except KeyError as e:
+            logging.error(f"Erro na formatação da mensagem de log:{e}")
+            return
+
+        if log_type.value == logging.INFO:
+            logging.info(formatted_message)
+        elif log_type.value == logging.ERROR:
+            logging.error(formatted_message)
+        elif log_type.value == logging.WARNING:
+            logging.warning(formatted_message)
+        elif log_type.value == logging.DEBUG:
+            logging.debug(formatted_message)
+        elif log_type.value == logging.CRITICAL:
+            logging.critical(formatted_message)

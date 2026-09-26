@@ -1,0 +1,364 @@
+
+import pytest
+import logging
+from src.SLL.py_log import AppLogger,LogType,Logmessage
+from src import get_config
+import hashlib
+
+
+def fingerprint(token):
+    return "sha256:" + hashlib.sha256(token.encode()).hexdigest()[:8]
+
+
+#TEST TOKEN FAILURE
+def teste_log_token_successfully(caplog):
+    token = "12345"
+    email = "udf@udf.com"
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.TOKEN_FAILURE,
+            LogType.INFO,
+            token=token,
+            email=email,
+            ip_address=remote_addr,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "INFO"
+    # O token nunca vai em claro para o log: só uma impressão digital curta,
+    # que permite correlacionar linhas sem permitir reusar o token.
+    expected_message = f"Token validation failed; email: udf@udf.com; token: {fingerprint('12345')}; IP: localhost;"
+    assert  expected_message in log_record.message
+    assert "12345" not in log_record.message
+
+
+def teste_log_token_failure(caplog):
+    token = '12345'
+    email = "udf@udf.com"
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.TOKEN_FAILURE,
+            LogType.INFO,
+            email=email,
+            ip_address=remote_addr,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "ERROR"
+    expected_message = "Erro na formatação da mensagem de log:'token'"
+    assert  expected_message in log_record.message
+
+
+#TEST MISSING API KEY
+def teste_missing_api_key_successfully(caplog):
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.MISSING_API_KEY,
+            LogType.INFO,
+            ip_address=remote_addr,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "INFO"
+    expected_message = "Invalid or missing API key:IP localhost;"
+    assert expected_message in log_record.message
+
+
+def teste_missing_api_key_failure(caplog):
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.MISSING_API_KEY,
+            LogType.INFO,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "ERROR"
+    expected_message = "Erro na formatação da mensagem de log:'ip_address'"
+    assert expected_message in log_record.message
+
+
+#MISSING EMAIL
+def teste_missing_email_successfully(caplog):
+    token = "1234"
+    email = None
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.MISSING_EMAIL if not email else Logmessage.MISSING_TOKEN,
+            LogType.INFO,
+            token=token,
+            email = email,
+            ip_address=remote_addr,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "INFO"
+    expected_message = f"Email missing; email: token: {fingerprint('1234')}; IP: localhost"
+    assert expected_message in log_record.message
+    assert "1234;" not in log_record.message
+
+
+#INVALID EMAIL DOMAIN
+def teste_invalid_email_domain_successfully(caplog):
+    email = "udf@udf.com"
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.INVALID_EMAIL_DOMAIN,
+            LogType.INFO,
+            email=email,
+            ip_address=remote_addr,
+         )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "INFO"
+    expected_message = "Invalid email domain; email: udf@udf.com; IP: localhost;"
+    assert expected_message in log_record.message
+
+
+def teste_invalid_email_domain_failure(caplog):
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.INVALID_EMAIL_DOMAIN,
+            LogType.INFO,
+            ip_address=remote_addr,
+         )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "ERROR"
+    expected_message = "Erro na formatação da mensagem de log:'email"
+    assert expected_message in log_record.message
+
+
+#FAILED SEND EMAIL
+def teste_failed_send_email_successfully(caplog):
+    remote_addr = 'localhost'
+    email = 'udf@udf.com'
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.FAILED_SEND_EMAIL,
+            LogType.INFO,
+            ip_address=remote_addr,
+            email=email,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "INFO"
+    expected_message = "Email sender service unavailable: failed to send email; IP: localhost; Email: udf@udf.com;"
+    assert expected_message in log_record.message
+
+
+def teste_failed_send_email_failure(caplog):
+    remote_addr = 'localhost'
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.FAILED_SEND_EMAIL,
+            LogType.INFO,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "ERROR"
+    expected_message = "Erro na formatação da mensagem de log:'ip_address'"
+    assert expected_message in log_record.message
+
+
+#MISSING DATA
+def teste_missing_data_successfully(caplog):
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.MISSING_DATA,
+            LogType.INFO,
+            ip_address=remote_addr,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "INFO"
+    expected_message = "Missing data; IP: localhost;"
+    assert expected_message in log_record.message
+
+
+def teste_missing_data_failure(caplog):
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.MISSING_DATA,
+            LogType.INFO,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "ERROR"
+    expected_message = "Erro na formatação da mensagem de log:'ip_address'"
+    assert expected_message in log_record.message
+
+
+#EVENTS NOT FOUND
+def teste_events_not_found_successfully(caplog):
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.EVENTS_NOT_FOUND,
+            LogType.INFO,
+            ip_address=remote_addr,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "INFO"
+    expected_message = "Events not found; IP: localhost;"
+    assert expected_message in log_record.message
+
+
+def teste_events_not_found_failure(caplog):
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.EVENTS_NOT_FOUND,
+            LogType.INFO,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "ERROR"
+    expected_message = "Erro na formatação da mensagem de log:'ip_address'"
+    assert expected_message in log_record.message
+
+
+#RESERVETION NOT FOUND
+def teste_reservation_not_found_successfully(caplog):
+    # Antes chamava Logmessage.EVENTS_NOT_FOUND por copy-paste -- o nome do
+    # teste diz "reservation", e Logmessage.RESERVATION_NOT_FOUND já existe.
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.RESERVATION_NOT_FOUND,
+            LogType.INFO,
+            ip_address=remote_addr,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "INFO"
+    expected_message = "Reservation not found; IP: localhost;"
+    assert expected_message in log_record.message
+
+
+def teste_reservation_not_found_failure(caplog):
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.RESERVATION_NOT_FOUND,
+            LogType.INFO,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "ERROR"
+    expected_message = "Erro na formatação da mensagem de log:'ip_address'"
+    assert expected_message in log_record.message
+
+
+#BUILDING NOT FOUND
+def teste_building_not_found_successfully(caplog):
+    remote_addr= "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.BUILDING_NOT_FOUND,
+            LogType.INFO,
+            ip_address=remote_addr,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "INFO"
+    expected_message = "Building not found; IP: localhost;"
+    assert expected_message in log_record.message
+
+
+def teste_building_not_found_failure(caplog):
+    remote_addr= "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.BUILDING_NOT_FOUND,
+            LogType.INFO,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "ERROR"
+    expected_message = "Erro na formatação da mensagem de log:'ip_address'"
+    assert expected_message in log_record.message
+
+
+#ROOMS NOT FOUND
+def teste_rooms_not_found_successfully(caplog):
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.ROOMS_NOT_FOUND,
+            LogType.INFO,
+            ip_address=remote_addr,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "INFO"
+    expected_message = "Rooms not found; IP: localhost;"
+    assert expected_message in log_record.message
+
+
+def teste_rooms_not_found(caplog):
+    remote_addr = "localhost"
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(
+            Logmessage.ROOMS_NOT_FOUND,
+            LogType.INFO,
+        )
+
+    assert len(caplog.records) == 1
+    log_record = caplog.records[0]
+    assert log_record.levelname == "ERROR"
+    expected_message = "Erro na formatação da mensagem de log:'ip_address'"
+    assert expected_message in log_record.message
+
+SECRET = "tok-9f8e7d6c5b4a-segredo"
+
+
+@pytest.mark.parametrize("message, extra", [
+    (Logmessage.TOKEN_VALIDATED, {"email": "a@udf.edu.br", "ip_address": "1.2.3.4"}),
+    (Logmessage.TOKEN_FAILURE, {"email": "a@udf.edu.br", "ip_address": "1.2.3.4"}),
+    (Logmessage.MISSING_EMAIL, {"ip_address": "1.2.3.4"}),
+    (Logmessage.SENDING_EMAIL, {"email": "a@udf.edu.br", "event": "ev1"}),
+    (Logmessage.EVENT_APPROVED_REJECTED_BY, {"event_id": "ev1", "action": "approved", "who": "reitoria"}),
+])
+def test_no_log_message_writes_the_raw_token(caplog, message, extra):
+    # Login (magic link) e aprovação (link do e-mail) são tokens que dão acesso:
+    # quem lê o py_log.log não pode conseguir reusá-los (SEC-03).
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(message, LogType.INFO, token=SECRET, **extra)
+
+    assert SECRET not in caplog.text
+    assert fingerprint(SECRET) in caplog.text
+
+
+def test_missing_token_is_logged_as_dash(caplog):
+    with caplog.at_level(logging.INFO):
+        AppLogger.log(Logmessage.TOKEN_FAILURE, LogType.INFO, token=None, email="a@udf.edu.br", ip_address="x")
+
+    assert "token: -;" in caplog.text

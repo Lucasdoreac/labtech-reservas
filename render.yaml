@@ -1,0 +1,137 @@
+# Blueprint de Infraestrutura como Código (IaC) para Render
+# Monorepo: LabTech UDF - Sistema de Reservas
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  # 1. Catálogo UDF (Microserviço REST + GraphQL)
+  - type: web
+    name: reservas-catalog
+    rootDir: apps/catalog
+    env: python
+    plan: free
+    region: oregon
+    dockerfilePath: Dockerfile
+    healthCheckPath: /restapi/campus/
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: CACHE_TYPE
+        value: SimpleCache
+      - key: MONGO_DATABASE
+        value: rooms-reservation-app
+      - key: MONGO_URI
+        sync: false
+      - key: API_KEY_LIST
+        sync: false
+
+  # 2. Autenticação (Microserviço Auth Token / Magic Link)
+  - type: web
+    name: reservas-auth
+    rootDir: apps/auth
+    env: python
+    plan: free
+    region: oregon
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: CACHE_TYPE
+        value: SimpleCache
+      - key: AUTH_DEV_RETURN_LINK
+        value: "true"
+      - key: AUTH_ALLOWED_DOMAIN
+        value: udf.edu.br
+      - key: MONGO_DATABASE
+        value: rooms-reservation-app
+      - key: MONGO_URI
+        sync: false
+      - key: INTERNAL_APIS_KEY
+        sync: false
+      - key: CLOUD_FUNCTION_URL
+        fromService:
+          type: web
+          name: reservas-api
+          property: host
+      - key: CLOUD_FUNCTION_API_KEY
+        sync: false
+      - key: REACT_APP
+        fromService:
+          type: web
+          name: reservas-web
+          property: host
+
+  # 3. API Principal de Reservas (Flask / Gunicorn)
+  - type: web
+    name: reservas-api
+    rootDir: apps/api
+    env: python
+    plan: free
+    region: oregon
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: MONGO_DATABASE
+        value: rooms-reservation-app
+      - key: MONGO_URI
+        sync: false
+      - key: SERVER_SCHEME
+        value: https
+      - key: AUTH_ALLOWED_DOMAIN
+        value: udf.edu.br
+      - key: EMAIL_DRY_RUN
+        value: "true"
+      - key: INTERNAL_API_KEY
+        sync: false
+      - key: URL_AUTH
+        fromService:
+          type: web
+          name: reservas-auth
+          property: host
+      - key: URL_restapi
+        fromService:
+          type: web
+          name: reservas-catalog
+          property: host
+        postProcess: "https://{{value}}/restapi"
+      - key: URL_graph
+        fromService:
+          type: web
+          name: reservas-catalog
+          property: host
+        postProcess: "https://{{value}}/graphql/"
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: reservas-web
+          property: host
+      - key: CLOUD_FUNCTION_URL
+        fromService:
+          type: web
+          name: reservas-api
+          property: host
+      - key: CLOUD_FUNCTION_API_KEY
+        sync: false
+
+  # 4. Frontend Web (React / Vite Static Site)
+  - type: web
+    name: reservas-web
+    rootDir: apps/web
+    env: static
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: REACT_APP_API_BASE_URL
+        fromService:
+          type: web
+          name: reservas-api
+          property: host
+        postProcess: "https://{{value}}"

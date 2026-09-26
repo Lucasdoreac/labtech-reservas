@@ -1,0 +1,13 @@
+rooms-reservation-app.authentications 87
+rooms-reservation-app.campus 2
+rooms-reservation-app.courses 42
+rooms-reservation-app.disciplines 659
+rooms-reservation-app.events 1
+rooms-reservation-app.offers 1858
+rooms-reservation-app.pdfs 1
+rooms-reservation-app.periods 4
+rooms-reservation-app.reservations 1
+rooms-reservation-app.rooms 151
+rooms-reservation-app.send_email 3
+rooms-reservation-app.teachers 248
+rooms-reservation-app.types 3
