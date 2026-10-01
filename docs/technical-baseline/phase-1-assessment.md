@@ -13,10 +13,10 @@ A validação local usa os heads ativos dos PRs nos forks, pois são os candidat
 | `python-services` (API) | PR #68, `0f6e6b4` (Stage `f503e34`) | 43 pacotes atuais; lock-only charset-normalizer refresh e Docker API validada (56 testes). |
 | `shared-resources` (Auth) | PR #31, `4dcb326` (Stage `92b93ff`) | 35 pacotes atuais; lock-only charset-normalizer refresh e Docker Auth validada (18 testes + 4 subtestes). |
 | `shared-resources` (Catálogo) | PR #30, `05e0da8` | 43 de 44 atuais; `graphql-core` está limitado pelos requisitos dos pais Graphene/graphql-relay/graphql-server. Não forçar override incompatível. |
-| `interfaces-usuario` (Web) | PR #41, `656f372` (Stage `454966c`) | 111 de 137 atuais; 26 dependências transitivas aguardam migração de versões-pai. Sass e dados de compatibilidade do navegador atualizados no PR #41; build SPA e 26 testes passaram. Staging ainda usa o head anterior. |
+| `interfaces-usuario` (Web) | PR #41, `656f372` (Stage `454966c`) | 111 de 137 atuais; 26 transitivas aguardam migração de pais: `@react-router/dev@8.4.0` mantém Babel 7.x e `babel-dead-code-elimination@1.x` (2.0.0 já existe); `react-router@8.4.0` mantém `route-pattern` 0.22.x. Sass e compatibilidade de navegador atualizados; build SPA e 26 testes passaram. Staging usa head anterior. |
 | `supreme-test-framework` (E2E) | PR #3, `5eb45ec` | 39 pacotes atuais; Selenium alinhado entre Poetry lock e requirements, com 7 testes unitários e 2 cenários E2E passados. |
 
-Os números são do inventário local de manifests/locks na data da avaliação. “Atual” significa versão estável registrada no levantamento; não é garantia geral de ausência de vulnerabilidades. Rechecagem de metadados em 01/10 confirmou que os pais de GraphQL e React Router continuam nas versões estáveis mais recentes e ainda limitam as atualizações transitivas; não há atualização de pai compatível para aplicar agora.
+Os números são do inventário local de manifests/locks na data da avaliação. “Atual” significa versão estável registrada no levantamento; não é garantia geral de ausência de vulnerabilidades. Rechecagem de metadados em 01/10: Poetry lista só `graphql-core` (3.2.13→3.3.0) como desatualizado no Catálogo; API/Auth/E2E não listam updates. Pais GraphQL e React Router continuam nas versões estáveis mais recentes; nenhum permite atualizar os transitivos bloqueados sem override incompatível.
 
 ## Ambiente e dados
 
