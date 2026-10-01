@@ -16,7 +16,7 @@ A validação local usa os heads ativos dos PRs nos forks, pois são os candidat
 | `interfaces-usuario` (Web) | PR #41, `91753ac` (Stage `454966c`) | 111 de 137 atuais; 26 dependências transitivas aguardam migração de versões-pai. Sass `1.105.0 → 1.105.1` atualizado no PR #41; build SPA aprovado no Docker. Staging ainda usa o head anterior. |
 | `supreme-test-framework` (E2E) | PR #3, `b7fd17b` | 39 pacotes registrados como atuais. |
 
-Os números são do inventário local de manifests/locks na data da avaliação. “Atual” significa versão estável registrada no levantamento; não é garantia geral de ausência de vulnerabilidades.
+Os números são do inventário local de manifests/locks na data da avaliação. “Atual” significa versão estável registrada no levantamento; não é garantia geral de ausência de vulnerabilidades. Rechecagem de metadados em 01/10 confirmou que os pais de GraphQL e React Router continuam nas versões estáveis mais recentes e ainda limitam as atualizações transitivas; não há atualização de pai compatível para aplicar agora.
 
 ## Ambiente e dados
 
