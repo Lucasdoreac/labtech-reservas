@@ -13,7 +13,7 @@ A validação local usa os heads ativos dos PRs nos forks, pois são os candidat
 | `python-services` (API) | PR #68, `f503e34` | 43 pacotes registrados como atuais; refresh já está na linhagem do PR. |
 | `shared-resources` (Auth) | PR #31, `92b93ff` | 35 pacotes registrados como atuais. |
 | `shared-resources` (Catálogo) | PR #30, `05e0da8` | 43 de 44 atuais; `graphql-core` está limitado pelos requisitos dos pais Graphene/graphql-relay/graphql-server. Não forçar override incompatível. |
-| `interfaces-usuario` (Web) | PR #41, `454966c` | 111 de 137 atuais; 26 dependências transitivas aguardam migração de versões-pai. Patch local isolado de Sass `1.105.0 → 1.105.1`, build SPA aprovado; aguarda integrar ao PR. |
+| `interfaces-usuario` (Web) | PR #41, `91753ac` (Stage `454966c`) | 111 de 137 atuais; 26 dependências transitivas aguardam migração de versões-pai. Sass `1.105.0 → 1.105.1` atualizado no PR #41; build SPA aprovado no Docker. Staging ainda usa o head anterior. |
 | `supreme-test-framework` (E2E) | PR #3, `b7fd17b` | 39 pacotes registrados como atuais. |
 
 Os números são do inventário local de manifests/locks na data da avaliação. “Atual” significa versão estável registrada no levantamento; não é garantia geral de ausência de vulnerabilidades.
@@ -26,9 +26,8 @@ O backup Mongo foi validado com `mongorestore --dryRun` antes da criação de í
 
 ## Próximas correções e limites
 
-1. Integrar o patch Sass ao PR #41 e validar seu head revisado.
-2. Manter as dependências limitadas por pais como pendências de migração, sem forçar major incompatível.
-3. Conservar os heads dos PRs como referência local; validar alterações técnicas em cada serviço no Docker antes de atualizar seu PR.
+1. Manter as dependências limitadas por pais como pendências de migração, sem forçar major incompatível.
+2. Conservar os heads dos PRs como referência local; validar alterações técnicas em cada serviço no Docker antes de atualizar seu PR.
 4. Seguir com mudanças de dados somente quando necessárias e após backup validado; não carregar calendário sem fonte oficial.
 
 Não houve merge nem deploy Production nesta etapa. O relatório de dependências pacote a pacote e evidências detalhadas permanecem nos relatórios locais de trabalho.
