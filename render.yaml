@@ -79,10 +79,21 @@ services:
         sync: false
       - key: SERVER_SCHEME
         value: https
+      - key: SERVER_NAME
+        fromService:
+          type: web
+          name: reservas-api
+          property: host
       - key: AUTH_ALLOWED_DOMAIN
         value: udf.edu.br
       - key: EMAIL_DRY_RUN
         value: "true"
+      - key: EMAIL_ASSETS_BASE_URL
+        fromService:
+          type: web
+          name: reservas-api
+          property: host
+        postProcess: "https://{{value}}"
       - key: INTERNAL_API_KEY
         sync: false
       - key: URL_AUTH

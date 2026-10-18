@@ -24,6 +24,28 @@ COORDENACAO_BASE = ["base-coord@udf.edu.br"]
 REITORIA_BASE = ["reitoria@udf.edu.br"]
 
 
+def test_change_request_email_includes_staging_branding(monkeypatch, app):
+    from flask import render_template
+
+    from BLL.send_emails import _email_branding
+
+    monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.setenv("EMAIL_ASSETS_BASE_URL", "https://reservas-staging-api.onrender.com")
+    from settings import get_email_settings
+    get_email_settings.cache_clear()
+
+    with app.test_request_context():
+        html = render_template(
+            "email/mudancas_solicitadas.html",
+            mensagem="Trocar a sala",
+            edit_link="https://reservas-staging-web.onrender.com/event/type-selection?eventId=evt-1",
+            **_email_branding(),
+        )
+
+    assert "AMBIENTE DE TESTE — STAGING" in html
+    assert 'src="https://reservas-staging-api.onrender.com/static/email/dw-corp.png"' in html
+
+
 def enable_real_sending(monkeypatch):
     """Liga o envio real (EMAIL_DRY_RUN=false) com destinatários de teste.
 
@@ -37,6 +59,7 @@ def enable_real_sending(monkeypatch):
     monkeypatch.setenv("EMAIL_RECIPIENTS_REITORIA", ",".join(REITORIA_BASE))
     monkeypatch.setenv("CLOUD_FUNCTION_URL", "https://fn.example")
     monkeypatch.setenv("CLOUD_FUNCTION_API_KEY", "chave")
+    monkeypatch.setenv("BREVO_API_KEY", "fake-api-key")
     get_email_settings.cache_clear()
     return get_email_settings()
 

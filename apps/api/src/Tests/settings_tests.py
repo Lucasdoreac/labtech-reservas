@@ -9,12 +9,13 @@ SENDING_ENV = {
     "EMAIL_RECIPIENTS_REITORIA": "reitoria@udf.edu.br",
     "CLOUD_FUNCTION_URL": "https://fn.example",
     "CLOUD_FUNCTION_API_KEY": "chave",
+    "BREVO_API_KEY": "fake-api-key",
 }
 
 
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch):
-    for name in list(SENDING_ENV) + ["FLASK_ENV"]:
+    for name in list(SENDING_ENV) + ["FLASK_ENV", "APP_ENV", "EMAIL_REDIRECT_ALL_TO"]:
         monkeypatch.delenv(name, raising=False)
 
 
@@ -63,6 +64,32 @@ def test_empty_cloud_function_url_counts_as_undefined(monkeypatch):
         EmailSettings()
 
     assert "CLOUD_FUNCTION_URL" in str(error.value)
+
+
+def test_staging_real_sends_require_a_redirect_recipient(monkeypatch):
+    for name, value in SENDING_ENV.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setenv("APP_ENV", "staging")
+
+    with pytest.raises(ValidationError, match="EMAIL_REDIRECT_ALL_TO"):
+        EmailSettings()
+
+
+def test_redirect_recipient_is_only_allowed_in_staging(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("EMAIL_REDIRECT_ALL_TO", "danrleywillian@gmail.com")
+
+    with pytest.raises(ValidationError, match="APP_ENV=staging"):
+        EmailSettings()
+
+
+def test_staging_email_redirect_is_parsed_from_csv(monkeypatch):
+    for name, value in SENDING_ENV.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.setenv("EMAIL_REDIRECT_ALL_TO", " danrleywillian@gmail.com ")
+
+    assert EmailSettings().email_redirect_all_to == ["danrleywillian@gmail.com"]
 
 
 @pytest.mark.parametrize("value", ["", "   "])

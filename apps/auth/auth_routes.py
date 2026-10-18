@@ -70,14 +70,20 @@ def send_magic_link(email, username, magic_link):
         Response: HTTP response from the email sending service.
     """
     # Render the HTML template with dynamic data
-    minio_url = (os.getenv('MINIO_URL') or '').strip().rstrip('/')
-    minio_icon_url = f"{minio_url}/labtech/email-icones/magic-link.png" if minio_url else ""
+    api_base_url = (os.getenv('CLOUD_FUNCTION_URL') or '').strip().rstrip('/')
+    if api_base_url and not api_base_url.startswith(('https://', 'http://')):
+        api_base_url = f"https://{api_base_url}"
+    logo_url = f"{api_base_url}/static/email/dw-corp.png" if api_base_url else ""
     html_content = render_template('email/magic_link.html',
                                    username=username,
                                    magic_link=magic_link,
-                                   minio_icon_url=minio_icon_url)
+                                   logo_url=logo_url,
+                                   is_staging=os.getenv('APP_ENV', '').strip().lower() == 'staging')
 
-    url = f"{os.getenv('CLOUD_FUNCTION_URL')}/send-email"
+    # O Render `host` é só o hostname. Reutilize a URL normalizada acima para
+    # que staging/produção não tentem fazer POST em `api.onrender.com/send-email`
+    # sem esquema e falhem antes de chegar ao serviço de e-mail.
+    url = f"{api_base_url}/send-email" if api_base_url else ""
     payload = {
         'subject': 'Autorização de Acesso',
         'content': html_content,

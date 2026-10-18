@@ -43,6 +43,13 @@ def test_send_email_requires_api_key(client, monkeypatch):
     assert res.status_code == 401
 
 
+def test_dw_corp_email_logo_is_served_by_the_api(client):
+    response = client.get("/static/email/dw-corp.png")
+
+    assert response.status_code == 200
+    assert response.mimetype == "image/png"
+    assert response.data.startswith(b"\x89PNG\r\n\x1a\n")
+
 def test_send_email_validates_payload(client, monkeypatch):
     monkeypatch.setenv("CLOUD_FUNCTION_API_KEY", "chave-secreta")
     from settings import get_email_settings
@@ -118,3 +125,35 @@ def test_send_email_with_brevo_dispatches_message(client, monkeypatch):
     assert kwargs["subject"] == "Seu link"
     assert kwargs["content"] == "http://link"
     assert kwargs["is_html"] is False
+
+
+def test_staging_redirects_every_message_to_the_test_inbox(client, monkeypatch):
+    monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.setenv("CLOUD_FUNCTION_API_KEY", "chave-secreta")
+    monkeypatch.setenv("EMAIL_DRY_RUN", "false")
+    monkeypatch.setenv("EMAIL_RECIPIENTS_COORDENACAO", "danrleywillian@gmail.com")
+    monkeypatch.setenv("EMAIL_RECIPIENTS_REITORIA", "danrleywillian@gmail.com")
+    monkeypatch.setenv("EMAIL_REDIRECT_ALL_TO", "danrleywillian@gmail.com")
+    monkeypatch.setenv("CLOUD_FUNCTION_URL", "https://reservas-staging-api.onrender.com")
+    monkeypatch.setenv("BREVO_API_KEY", "fake-api-key")
+    monkeypatch.setenv("BREVO_SENDER_EMAIL", "staging@example.invalid")
+    from settings import get_email_settings
+    get_email_settings.cache_clear()
+
+    mock_send = MagicMock(return_value=MagicMock(message_id="msg-stage"))
+    monkeypatch.setattr("SLL.brevo_service.send_brevo_email", mock_send)
+    response = client.post(
+        "/send-email",
+        headers={"X-API-Key": "chave-secreta"},
+        json={
+            "to": ["real-coordinator@udf.edu.br", "organizer@example.com"],
+            "subject": "Evento Aprovado",
+            "content": "<p>Teste de staging</p>",
+            "is_html": True,
+        },
+    )
+
+    assert response.status_code == 200
+    _, kwargs = mock_send.call_args
+    assert kwargs["to"] == ["danrleywillian@gmail.com"]
+    assert kwargs["subject"] == "[STAGING] Evento Aprovado"
