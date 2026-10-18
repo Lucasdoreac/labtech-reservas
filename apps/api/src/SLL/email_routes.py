@@ -39,6 +39,13 @@ def send_email():
     if isinstance(to, str):
         to = [to]
 
+    # Em staging, todo e-mail é redirecionado para a caixa autorizada de teste.
+    # Isso também cobre emails de status cujo destinatário veio do cadastro do
+    # evento e impede que dados sintéticos atinjam pessoas da UDF.
+    if settings.email_redirect_all_to:
+        to = list(settings.email_redirect_all_to)
+        subject = f"[STAGING] {subject}"
+
     if settings.email_dry_run:
         AppLogger.log(
             f"EMAIL_DRY_RUN ligado no /send-email: '{subject}' não enviado para {to}",

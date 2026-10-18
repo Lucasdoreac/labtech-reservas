@@ -1,0 +1,164 @@
+# Blueprint de homologação isolado. Importe como blueprint separado no Render.
+# O banco deve ser um MONGO_URI de staging, separado do banco de produção.
+services:
+  - type: web
+    name: reservas-staging-catalog
+    rootDir: apps/catalog
+    env: python
+    plan: free
+    region: oregon
+    dockerfilePath: Dockerfile
+    healthCheckPath: /restapi/campus/
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: MONGO_DATABASE
+        value: rooms-reservation-staging
+      - key: MONGO_URI
+        sync: false
+      - key: CACHE_TYPE
+        value: SimpleCache
+      - key: API_KEY_LIST
+        generateValue: true
+
+  - type: web
+    name: reservas-staging-auth
+    rootDir: apps/auth
+    env: python
+    plan: free
+    region: oregon
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: APP_ENV
+        value: staging
+      - key: AUTH_DEV_RETURN_LINK
+        value: "false"
+      - key: AUTH_ALLOWED_DOMAIN
+        value: udf.edu.br
+      - key: MONGO_DATABASE
+        value: rooms-reservation-staging
+      - key: MONGO_URI
+        sync: false
+      - key: INTERNAL_APIS_KEY
+        fromService:
+          type: web
+          name: reservas-staging-catalog
+          envVarKey: API_KEY_LIST
+      - key: CLOUD_FUNCTION_URL
+        fromService:
+          type: web
+          name: reservas-staging-api
+          property: host
+        postProcess: "https://{{value}}"
+      - key: CLOUD_FUNCTION_API_KEY
+        fromService:
+          type: web
+          name: reservas-staging-api
+          envVarKey: CLOUD_FUNCTION_API_KEY
+      - key: REACT_APP
+        fromService:
+          type: web
+          name: reservas-staging-web
+          property: host
+        postProcess: "https://{{value}}"
+
+  - type: web
+    name: reservas-staging-api
+    rootDir: apps/api
+    env: python
+    plan: free
+    region: oregon
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: APP_ENV
+        value: staging
+      - key: MONGO_DATABASE
+        value: rooms-reservation-staging
+      - key: MONGO_URI
+        sync: false
+      - key: SERVER_SCHEME
+        value: https
+      - key: SERVER_NAME
+        fromService:
+          type: web
+          name: reservas-staging-api
+          property: host
+      - key: AUTH_ALLOWED_DOMAIN
+        value: udf.edu.br
+      - key: EMAIL_DRY_RUN
+        value: "false"
+      - key: EMAIL_REDIRECT_ALL_TO
+        value: danrleywillian@gmail.com
+      - key: EMAIL_RECIPIENTS_COORDENACAO
+        value: danrleywillian@gmail.com
+      - key: EMAIL_RECIPIENTS_REITORIA
+        value: danrleywillian@gmail.com
+      - key: EMAIL_ASSETS_BASE_URL
+        fromService:
+          type: web
+          name: reservas-staging-api
+          property: host
+        postProcess: "https://{{value}}"
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        sync: false
+      - key: BREVO_SENDER_NAME
+        value: LabTech Reservas UDF [STAGING]
+      - key: CLOUD_FUNCTION_API_KEY
+        generateValue: true
+      - key: INTERNAL_API_KEY
+        fromService:
+          type: web
+          name: reservas-staging-catalog
+          envVarKey: API_KEY_LIST
+      - key: URL_AUTH
+        fromService:
+          type: web
+          name: reservas-staging-auth
+          property: host
+        postProcess: "https://{{value}}"
+      - key: URL_restapi
+        fromService:
+          type: web
+          name: reservas-staging-catalog
+          property: host
+        postProcess: "https://{{value}}/restapi"
+      - key: URL_graph
+        fromService:
+          type: web
+          name: reservas-staging-catalog
+          property: host
+        postProcess: "https://{{value}}/graphql/"
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: reservas-staging-web
+          property: host
+        postProcess: "https://{{value}}"
+
+  - type: web
+    name: reservas-staging-web
+    rootDir: apps/web
+    env: static
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: REACT_APP_API_BASE_URL
+        fromService:
+          type: web
+          name: reservas-staging-api
+          property: host
+        postProcess: "https://{{value}}"

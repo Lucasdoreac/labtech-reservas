@@ -49,8 +49,20 @@ def _pdf_link(event_id):
 
 
 def _icon_url(name):
-    minio_url = (os.getenv("MINIO_URL") or "").strip().rstrip("/")
-    return f"{minio_url}/labtech/email-icones/{name}" if minio_url else ""
+    # Ícones remotos do MinIO quebravam quando o bucket/host não era público.
+    # Os templates usam símbolos e botões HTML acessíveis no lugar das imagens.
+    return ""
+
+
+def _email_branding():
+    """URLs e rótulo do email sem depender de imagens armazenadas no MinIO."""
+    settings = get_email_settings()
+    base_url = (settings.email_assets_base_url or "").strip().rstrip("/")
+    logo_url = f"{base_url}/static/email/dw-corp.png" if base_url else ""
+    return {
+        "logo_url": logo_url,
+        "is_staging": settings.app_env.strip().lower() == "staging",
+    }
 
 
 def send_to_coordenacao(event_id):
@@ -112,7 +124,8 @@ def send_to_coordenacao(event_id):
         reject_icon_url=reject_icon_url,
         request_changes_link=request_changes_link,
         approve_link=approve_link,
-        reject_link=reject_link
+        reject_link=reject_link,
+        **_email_branding(),
     )
     return _deliver(
         'Evento para Aprovação - Coordenação', html_content,
@@ -156,7 +169,8 @@ def send_to_reitoria(event_id):
         reject_icon_url=reject_icon_url,
         request_changes_link=request_changes_link,
         approve_link=approve_link,
-        reject_link=reject_link
+        reject_link=reject_link,
+        **_email_branding(),
     )
     return _deliver(
         'Evento para Aprovação - Reitoria', html_content,
@@ -232,6 +246,7 @@ def send_reservation_info_to_reitoria(event_id, reservation_date=None, classific
         room_name=room_name,
         room_campus=campus_name,
         reservation_date=formatted_reservation_date,
+        **_email_branding(),
     )
 
     # 8. Envia (ou devolve o HTML em dry-run)
@@ -297,6 +312,7 @@ def send_event_status(event_id, is_approved: bool, who: str, token:str):
         approved_icon_url=approved_icon_url,
         denied_icon_url=denied_icon_url,
         who="Reitoria" if who == "reitoria" else "Coordenação",
+        **_email_branding(),
     )
     # Subject line changes based on approval or denial
     subject = "Evento Aprovado" if is_approved else "Evento Não Aprovado"

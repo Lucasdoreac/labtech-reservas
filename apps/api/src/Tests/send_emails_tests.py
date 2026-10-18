@@ -37,6 +37,7 @@ def enable_real_sending(monkeypatch):
     monkeypatch.setenv("EMAIL_RECIPIENTS_REITORIA", ",".join(REITORIA_BASE))
     monkeypatch.setenv("CLOUD_FUNCTION_URL", "https://fn.example")
     monkeypatch.setenv("CLOUD_FUNCTION_API_KEY", "chave")
+    monkeypatch.setenv("BREVO_API_KEY", "fake-api-key")
     get_email_settings.cache_clear()
     return get_email_settings()
 

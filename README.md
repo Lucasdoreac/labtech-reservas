@@ -94,6 +94,10 @@ O monorepo está preparado para deploy contínuo gratuito no **Render**:
 - Banco de dados em nuvem: **MongoDB Atlas M0** com o catálogo UDF já semeado.
 - Envio de e-mails em produção: suporta **Brevo (Sendinblue)** com 300 envios/dia grátis.
 
+Para homologação isolada, consulte [`docs/STAGING_EMAILS.md`](docs/STAGING_EMAILS.md)
+e importe `render.staging.yaml` como um Blueprint separado. O staging usa banco
+próprio e redireciona todos os emails para a caixa de teste de Danrley.
+
 ---
 
 ## 🤝 Fluxo de Contribuição dos Colaboradores

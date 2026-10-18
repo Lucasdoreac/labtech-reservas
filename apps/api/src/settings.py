@@ -30,24 +30,38 @@ class EmailSettings(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore")
 
     email_dry_run: bool = True
+    app_env: str = "development"
     email_recipients_coordenacao: Annotated[list[str], NoDecode] = []
     email_recipients_reitoria: Annotated[list[str], NoDecode] = []
+    email_redirect_all_to: Annotated[list[str], NoDecode] = []
     cloud_function_url: str | None = None
     cloud_function_api_key: str | None = None
     brevo_api_key: str | None = None
     brevo_sender_email: str = "noreply@udf.edu.br"
     brevo_sender_name: str = "LabTech Reservas UDF"
+    email_assets_base_url: str | None = None
     # front do Reservas: link "editar o evento" no e-mail de pedido de mudança
     frontend_url: str = "http://localhost:3000"
 
-    @field_validator("email_recipients_coordenacao", "email_recipients_reitoria", mode="before")
+    @field_validator(
+        "email_recipients_coordenacao",
+        "email_recipients_reitoria",
+        "email_redirect_all_to",
+        mode="before",
+    )
     @classmethod
     def _split_csv(cls, value):
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
-    @field_validator("cloud_function_url", "cloud_function_api_key", "brevo_api_key", mode="before")
+    @field_validator(
+        "cloud_function_url",
+        "cloud_function_api_key",
+        "brevo_api_key",
+        "email_assets_base_url",
+        mode="before",
+    )
     @classmethod
     def _empty_is_none(cls, value):
         # `CLOUD_FUNCTION_URL=` (vazio) no .env deve valer "não definida".
@@ -55,8 +69,12 @@ class EmailSettings(BaseSettings):
 
     @model_validator(mode="after")
     def _require_config_when_sending(self):
+        if self.email_redirect_all_to and self.app_env.strip().lower() != "staging":
+            raise ValueError("EMAIL_REDIRECT_ALL_TO só pode ser usado em APP_ENV=staging")
         if self.email_dry_run:
             return self
+        if self.app_env.strip().lower() == "staging" and not self.email_redirect_all_to:
+            raise ValueError("APP_ENV=staging com envio real exige EMAIL_REDIRECT_ALL_TO")
         missing = [
             name
             for name, value in (
@@ -64,6 +82,7 @@ class EmailSettings(BaseSettings):
                 ("EMAIL_RECIPIENTS_REITORIA", self.email_recipients_reitoria),
                 ("CLOUD_FUNCTION_URL", self.cloud_function_url),
                 ("CLOUD_FUNCTION_API_KEY", self.cloud_function_api_key),
+                ("BREVO_API_KEY", self.brevo_api_key),
             )
             if not value
         ]
