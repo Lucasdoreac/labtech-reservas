@@ -74,3 +74,21 @@ def test_otherwise_the_link_goes_by_email(client, monkeypatch, flask_env, flag):
 
     assert response.get_json() == {"message": "Magic link sent successfully"}
     assert len(client.sent) == 1
+
+
+def test_magic_link_sender_adds_https_to_render_host(monkeypatch):
+    sent = []
+    monkeypatch.setenv("CLOUD_FUNCTION_URL", "reservas-staging-api.onrender.com")
+    monkeypatch.setenv("CLOUD_FUNCTION_API_KEY", "test-key")
+    monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.setattr(auth_routes, "render_template", lambda *args, **kwargs: "<p>login</p>")
+    monkeypatch.setattr(
+        auth_routes.requests,
+        "post",
+        lambda url, **kwargs: sent.append((url, kwargs)) or Sent(),
+    )
+
+    auth_routes.send_magic_link(EMAIL, "prof", "https://front/callback")
+
+    assert sent[0][0] == "https://reservas-staging-api.onrender.com/send-email"
+    assert sent[0][1]["headers"]["X-API-Key"] == "test-key"

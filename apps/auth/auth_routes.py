@@ -80,7 +80,10 @@ def send_magic_link(email, username, magic_link):
                                    logo_url=logo_url,
                                    is_staging=os.getenv('APP_ENV', '').strip().lower() == 'staging')
 
-    url = f"{os.getenv('CLOUD_FUNCTION_URL')}/send-email"
+    # O Render `host` é só o hostname. Reutilize a URL normalizada acima para
+    # que staging/produção não tentem fazer POST em `api.onrender.com/send-email`
+    # sem esquema e falhem antes de chegar ao serviço de e-mail.
+    url = f"{api_base_url}/send-email" if api_base_url else ""
     payload = {
         'subject': 'Autorização de Acesso',
         'content': html_content,

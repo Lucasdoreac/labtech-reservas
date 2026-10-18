@@ -4,7 +4,7 @@ services:
   - type: web
     name: reservas-staging-catalog
     rootDir: apps/catalog
-    env: python
+    runtime: docker
     plan: free
     region: oregon
     dockerfilePath: Dockerfile
@@ -24,7 +24,7 @@ services:
   - type: web
     name: reservas-staging-auth
     rootDir: apps/auth
-    env: python
+    runtime: docker
     plan: free
     region: oregon
     dockerfilePath: Dockerfile
@@ -48,27 +48,19 @@ services:
           name: reservas-staging-catalog
           envVarKey: API_KEY_LIST
       - key: CLOUD_FUNCTION_URL
-        fromService:
-          type: web
-          name: reservas-staging-api
-          property: host
-        postProcess: "https://{{value}}"
+        value: https://reservas-staging-api.onrender.com
       - key: CLOUD_FUNCTION_API_KEY
         fromService:
           type: web
           name: reservas-staging-api
           envVarKey: CLOUD_FUNCTION_API_KEY
       - key: REACT_APP
-        fromService:
-          type: web
-          name: reservas-staging-web
-          property: host
-        postProcess: "https://{{value}}"
+        value: https://reservas-staging-web.onrender.com
 
   - type: web
     name: reservas-staging-api
     rootDir: apps/api
-    env: python
+    runtime: docker
     plan: free
     region: oregon
     dockerfilePath: Dockerfile
@@ -100,11 +92,7 @@ services:
       - key: EMAIL_RECIPIENTS_REITORIA
         value: danrleywillian@gmail.com
       - key: EMAIL_ASSETS_BASE_URL
-        fromService:
-          type: web
-          name: reservas-staging-api
-          property: host
-        postProcess: "https://{{value}}"
+        value: https://reservas-staging-api.onrender.com
       - key: BREVO_API_KEY
         sync: false
       - key: BREVO_SENDER_EMAIL
@@ -113,42 +101,26 @@ services:
         value: LabTech Reservas UDF [STAGING]
       - key: CLOUD_FUNCTION_API_KEY
         generateValue: true
+      - key: CLOUD_FUNCTION_URL
+        value: https://reservas-staging-api.onrender.com
       - key: INTERNAL_API_KEY
         fromService:
           type: web
           name: reservas-staging-catalog
           envVarKey: API_KEY_LIST
       - key: URL_AUTH
-        fromService:
-          type: web
-          name: reservas-staging-auth
-          property: host
-        postProcess: "https://{{value}}"
+        value: https://reservas-staging-auth.onrender.com
       - key: URL_restapi
-        fromService:
-          type: web
-          name: reservas-staging-catalog
-          property: host
-        postProcess: "https://{{value}}/restapi"
+        value: https://reservas-staging-catalog.onrender.com/restapi
       - key: URL_graph
-        fromService:
-          type: web
-          name: reservas-staging-catalog
-          property: host
-        postProcess: "https://{{value}}/graphql/"
+        value: https://reservas-staging-catalog.onrender.com/graphql/
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: reservas-staging-web
-          property: host
-        postProcess: "https://{{value}}"
+        value: https://reservas-staging-web.onrender.com
 
   - type: web
     name: reservas-staging-web
     rootDir: apps/web
-    env: static
-    plan: free
-    region: oregon
+    runtime: static
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
     routes:
@@ -157,8 +129,4 @@ services:
         destination: /index.html
     envVars:
       - key: REACT_APP_API_BASE_URL
-        fromService:
-          type: web
-          name: reservas-staging-api
-          property: host
-        postProcess: "https://{{value}}"
+        value: https://reservas-staging-api.onrender.com
