@@ -22,11 +22,19 @@ adicione destinatários reais da Coordenação ou Reitoria nesse blueprint.
 
 ## Localizar os emails
 
-Depois que o Render concluir o deploy, Danrley deve procurar no Gmail por
-`[STAGING]`. O remetente aparecerá como **LabTech Reservas UDF [STAGING]**. O
-logo DW Corp é servido pela API pública de staging em
-`/static/email/dw-corp.png`; ações e PDF usam botões/texto HTML, sem depender de
-imagens privadas do MinIO.
+Depois que o Render concluir o deploy e o envio de teste for disparado, Danrley
+pode colar este filtro na busca do Gmail:
+
+```text
+in:anywhere to:danrleywillian@gmail.com subject:[STAGING]
+```
+
+`in:anywhere` inclui Spam e Lixeira; o remetente aparecerá como **LabTech
+Reservas UDF [STAGING]**. Se a busca não retornar mensagens, conferir primeiro
+Spam e depois o status de envio no Brevo e os logs da API. O logo DW Corp é
+servido pela API pública de staging em `/static/email/dw-corp.png`; os emails de
+aprovação, status, reserva, pedido de mudanças e login usam essa marca. Ações e
+PDF usam botões/texto HTML, sem depender de imagens privadas do MinIO.
 
 Use apenas eventos sintéticos. O redirecionamento protege destinatários, mas o
 conteúdo do email ainda pode conter os dados do evento criado.

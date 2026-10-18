@@ -339,6 +339,7 @@ def request_event_changes(event_id: str, message: str, token: str):
         "email/mudancas_solicitadas.html",
         mensagem=message,
         edit_link=f"{get_email_settings().frontend_url.rstrip('/')}/event/type-selection?eventId={event_id}",
+        **_email_branding(),
     )
     return _deliver("Evento: a Coordenação pediu mudanças", html_content, [email], event_id, token)
 
